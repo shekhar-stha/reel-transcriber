@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reel Transcriber</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e5e5e5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 640px;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            color: #fff;
+        }
+
+        .subtitle {
+            color: #888;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #1a1a1a;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus { border-color: #d97706; }
+        input::placeholder { color: #555; }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            background: #d97706;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+
+        button:hover { opacity: 0.9; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .result {
+            display: none;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .result-header span {
+            font-size: 0.8rem;
+            color: #888;
+            background: #262626;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+        }
+
+        .copy-btn {
+            padding: 0.3rem 0.8rem;
+            font-size: 0.8rem;
+            background: #262626;
+            color: #ccc;
+            border-radius: 4px;
+        }
+
+        .copy-btn:hover { background: #333; }
+
+        .transcript-text {
+            line-height: 1.7;
+            font-size: 0.95rem;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .status {
+            text-align: center;
+            padding: 2rem 0;
+            color: #888;
+            display: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #333;
+            border-top-color: #d97706;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error {
+            color: #ef4444;
+            text-align: center;
+            padding: 1rem 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Reel Transcriber</h1>
+        <p class="subtitle">Paste an Instagram Reel link and get the full transcript.</p>
+
+        <div class="input-group">
+            <input type="url" id="url" placeholder="https://www.instagram.com/reel/..." autofocus>
+            <button id="btn" onclick="transcribe()">Transcribe</button>
+        </div>
+
+        <div class="status" id="status">
+            <span class="spinner"></span> Downloading and transcribing — this may take 30-60 seconds...
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="result" id="result">
+            <div class="result-header">
+                <span id="lang"></span>
+                <button class="copy-btn" onclick="copyText()">Copy</button>
+            </div>
+            <div class="transcript-text" id="transcript"></div>
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('url');
+        const btn = document.getElementById('btn');
+        const status = document.getElementById('status');
+        const error = document.getElementById('error');
+        const result = document.getElementById('result');
+        const transcript = document.getElementById('transcript');
+        const lang = document.getElementById('lang');
+
+        urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') transcribe(); });
+
+        async function transcribe() {
+            const url = urlInput.value.trim();
+            if (!url) return;
+
+            btn.disabled = true;
+            status.style.display = 'block';
+            error.style.display = 'none';
+            result.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/transcribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Something went wrong');
+                }
+
+                const data = await res.json();
+                transcript.textContent = data.transcript;
+                lang.textContent = `Language: ${data.language}`;
+                result.style.display = 'block';
+            } catch (e) {
+                error.textContent = e.message;
+                error.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                status.style.display = 'none';
+            }
+        }
+
+        function copyText() {
+            navigator.clipboard.writeText(transcript.textContent);
+            document.querySelector('.copy-btn').textContent = 'Copied!';
+            setTimeout(() => document.querySelector('.copy-btn').textContent = 'Copy', 2000);
+        }
+    </script>
+</body>
+</html>
