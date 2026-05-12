@@ -4,5 +4,5 @@ services:
     runtime: docker
     plan: free
     envVars:
-      - key: WHISPER_MODEL
-        value: tiny
+      - key: OPENAI_API_KEY
+        sync: false

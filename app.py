@@ -3,24 +3,25 @@ import tempfile
 import uuid
 from pathlib import Path
 
-import whisper
 import yt_dlp
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
+from openai import OpenAI
 from pydantic import BaseModel
 
 app = FastAPI(title="Reel Transcriber")
 
-model = None
+client = None
 
 
-def get_model():
-    global model
-    if model is None:
-        model_size = os.environ.get("WHISPER_MODEL", "base")
-        model = whisper.load_model(model_size)
-    return model
+def get_client():
+    global client
+    if client is None:
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise HTTPException(500, "OPENAI_API_KEY not configured on the server")
+        client = OpenAI(api_key=api_key)
+    return client
 
 
 class TranscribeRequest(BaseModel):
@@ -39,16 +40,16 @@ async def transcribe(req: TranscribeRequest):
         raise HTTPException(400, "URL is required")
 
     tmp_dir = tempfile.mkdtemp()
-    audio_path = os.path.join(tmp_dir, f"{uuid.uuid4().hex}.mp3")
+    output_template = os.path.join(tmp_dir, f"{uuid.uuid4().hex}.%(ext)s")
 
     ydl_opts = {
         "format": "bestaudio/best",
-        "outtmpl": audio_path,
+        "outtmpl": output_template,
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "mp3",
-                "preferredquality": "192",
+                "preferredquality": "128",
             }
         ],
         "quiet": True,
@@ -59,24 +60,26 @@ async def transcribe(req: TranscribeRequest):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
     except Exception as e:
-        raise HTTPException(400, f"Failed to download: {e}")
+        raise HTTPException(400, f"Failed to download reel: {e}")
 
-    final_path = audio_path
-    if not os.path.exists(final_path):
-        mp3_path = audio_path + ".mp3"
-        if os.path.exists(mp3_path):
-            final_path = mp3_path
-        else:
-            for f in Path(tmp_dir).iterdir():
-                if f.suffix in (".mp3", ".m4a", ".wav", ".webm", ".opus"):
-                    final_path = str(f)
-                    break
+    audio_file = None
+    for f in Path(tmp_dir).iterdir():
+        if f.suffix in (".mp3", ".m4a", ".wav", ".webm", ".opus"):
+            audio_file = f
+            break
 
-    if not os.path.exists(final_path):
+    if not audio_file or not audio_file.exists():
         raise HTTPException(500, "Audio file not found after download")
 
     try:
-        result = get_model().transcribe(final_path)
+        with open(audio_file, "rb") as f:
+            result = get_client().audio.transcriptions.create(
+                model="whisper-1",
+                file=f,
+                response_format="verbose_json",
+            )
+        transcript_text = result.text.strip()
+        language = getattr(result, "language", "unknown")
     except Exception as e:
         raise HTTPException(500, f"Transcription failed: {e}")
     finally:
@@ -84,10 +87,7 @@ async def transcribe(req: TranscribeRequest):
             f.unlink(missing_ok=True)
         os.rmdir(tmp_dir)
 
-    return TranscribeResponse(
-        transcript=result["text"].strip(),
-        language=result.get("language", "unknown"),
-    )
+    return TranscribeResponse(transcript=transcript_text, language=language)
 
 
 @app.get("/", response_class=HTMLResponse)
