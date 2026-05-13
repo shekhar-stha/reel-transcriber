@@ -6,7 +6,6 @@
     <title>Reel Transcriber</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0a0a0a;
@@ -16,33 +15,12 @@
             align-items: center;
             justify-content: center;
         }
+        .container { width: 100%; max-width: 680px; padding: 2rem; }
+        h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.25rem; color: #fff; }
+        .subtitle { color: #888; margin-bottom: 1.5rem; font-size: 0.95rem; }
 
-        .container {
-            width: 100%;
-            max-width: 640px;
-            padding: 2rem;
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-            color: #fff;
-        }
-
-        .subtitle {
-            color: #888;
-            margin-bottom: 2rem;
-            font-size: 0.95rem;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        input {
+        .controls { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+        input[type="url"] {
             flex: 1;
             padding: 0.75rem 1rem;
             border: 1px solid #333;
@@ -51,11 +29,19 @@
             color: #fff;
             font-size: 1rem;
             outline: none;
-            transition: border-color 0.2s;
         }
-
-        input:focus { border-color: #d97706; }
+        input[type="url"]:focus { border-color: #d97706; }
         input::placeholder { color: #555; }
+
+        select {
+            padding: 0.75rem 1rem;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #1a1a1a;
+            color: #fff;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
 
         button {
             padding: 0.75rem 1.5rem;
@@ -66,12 +52,12 @@
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: opacity 0.2s;
             white-space: nowrap;
         }
-
         button:hover { opacity: 0.9; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .hint { font-size: 0.8rem; color: #666; margin-bottom: 1.5rem; }
 
         .result {
             display: none;
@@ -80,83 +66,46 @@
             border-radius: 8px;
             padding: 1.25rem;
         }
-
-        .result-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-        }
-
+        .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
         .result-header span {
-            font-size: 0.8rem;
-            color: #888;
-            background: #262626;
-            padding: 0.2rem 0.6rem;
-            border-radius: 4px;
+            font-size: 0.8rem; color: #888;
+            background: #262626; padding: 0.2rem 0.6rem; border-radius: 4px;
         }
-
-        .copy-btn {
-            padding: 0.3rem 0.8rem;
-            font-size: 0.8rem;
-            background: #262626;
-            color: #ccc;
-            border-radius: 4px;
-        }
-
+        .copy-btn { padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #262626; color: #ccc; border-radius: 4px; }
         .copy-btn:hover { background: #333; }
+        .transcript-text { line-height: 1.7; font-size: 0.95rem; white-space: pre-wrap; max-height: 450px; overflow-y: auto; }
 
-        .transcript-text {
-            line-height: 1.7;
-            font-size: 0.95rem;
-            white-space: pre-wrap;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .status {
-            text-align: center;
-            padding: 2rem 0;
-            color: #888;
-            display: none;
-        }
-
+        .status { text-align: center; padding: 2rem 0; color: #888; display: none; }
         .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #333;
-            border-top-color: #d97706;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 0.5rem;
-            vertical-align: middle;
+            display: inline-block; width: 20px; height: 20px;
+            border: 2px solid #333; border-top-color: #d97706;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+            margin-right: 0.5rem; vertical-align: middle;
         }
-
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        .error {
-            color: #ef4444;
-            text-align: center;
-            padding: 1rem 0;
-            display: none;
-        }
+        .error { color: #ef4444; text-align: center; padding: 1rem 0; display: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Reel Transcriber</h1>
-        <p class="subtitle">Paste an Instagram Reel link and get the full transcript.</p>
+        <p class="subtitle">Paste an Instagram / TikTok / YouTube link. Runs offline on your Mac.</p>
 
-        <div class="input-group">
+        <div class="controls">
             <input type="url" id="url" placeholder="https://www.instagram.com/reel/..." autofocus>
+            <select id="model">
+                <option value="tiny">tiny (fast)</option>
+                <option value="base" selected>base</option>
+                <option value="small">small</option>
+                <option value="medium">medium (accurate)</option>
+            </select>
             <button id="btn" onclick="transcribe()">Transcribe</button>
         </div>
+        <p class="hint">First use of each model downloads it (~75MB - 1.5GB). After that, fully offline.</p>
 
         <div class="status" id="status">
-            <span class="spinner"></span> Downloading and transcribing — this may take 30-60 seconds...
+            <span class="spinner"></span> Working... downloading reel + transcribing.
         </div>
-
         <div class="error" id="error"></div>
 
         <div class="result" id="result">
@@ -170,6 +119,7 @@
 
     <script>
         const urlInput = document.getElementById('url');
+        const modelSelect = document.getElementById('model');
         const btn = document.getElementById('btn');
         const status = document.getElementById('status');
         const error = document.getElementById('error');
@@ -182,27 +132,23 @@
         async function transcribe() {
             const url = urlInput.value.trim();
             if (!url) return;
-
             btn.disabled = true;
             status.style.display = 'block';
             error.style.display = 'none';
             result.style.display = 'none';
-
             try {
                 const res = await fetch('/api/transcribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url })
+                    body: JSON.stringify({ url, model: modelSelect.value })
                 });
-
                 if (!res.ok) {
                     const data = await res.json();
                     throw new Error(data.detail || 'Something went wrong');
                 }
-
                 const data = await res.json();
                 transcript.textContent = data.transcript;
-                lang.textContent = `Language: ${data.language}`;
+                lang.textContent = `Language: ${data.language} · Model: ${modelSelect.value}`;
                 result.style.display = 'block';
             } catch (e) {
                 error.textContent = e.message;
