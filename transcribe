@@ -1,0 +1,5 @@
+#!/bin/bash
+# Wrapper so you can just run: ./transcribe <url>
+cd "$(dirname "$0")"
+export PATH="$HOME/.local/bin:$PATH"
+exec uv run python transcribe.py "$@"
