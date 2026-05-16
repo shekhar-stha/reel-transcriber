@@ -2,7 +2,15 @@ services:
   - type: web
     name: reel-transcriber
     runtime: docker
+    rootDir: hosted
+    dockerfilePath: ./Dockerfile
     plan: free
     envVars:
       - key: OPENAI_API_KEY
         sync: false
+    # NOTE: Persistent disks require paid plan ($7/mo Starter or higher).
+    # Uncomment below if you upgrade — history will then survive redeploys.
+    # disk:
+    #   name: history
+    #   mountPath: /data
+    #   sizeGB: 1
