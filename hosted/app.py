@@ -250,26 +250,58 @@ async def logout(session: str | None = Cookie(None)):
 
 def _login_page(error: str = "") -> str:
     err_html = f'<div class="error">{error}</div>' if error else ""
-    return f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Login - Reel Transcriber</title>
+    return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reel Transcriber - Sign in</title>
 <style>
-body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0a0a0a; color: #e5e5e5;
-       min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; }}
-.box {{ background: #1a1a1a; padding: 2rem; border-radius: 12px; border: 1px solid #333; width: 360px; }}
-h1 {{ color: #fff; margin: 0 0 0.5rem; font-size: 1.4rem; }}
-p {{ color: #888; margin: 0 0 1.5rem; font-size: 0.9rem; }}
-input {{ width: 100%; padding: 0.75rem 1rem; background: #0a0a0a; border: 1px solid #333; border-radius: 8px;
-         color: #fff; font-size: 1rem; margin-bottom: 0.75rem; outline: none; }}
+* {{ box-sizing: border-box; }}
+body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+       background: radial-gradient(ellipse at top, #1a1109 0%, #0a0a0a 60%);
+       color: #e5e5e5; min-height: 100vh; display: flex; flex-direction: column;
+       align-items: center; justify-content: center; margin: 0; padding: 1.5rem; }}
+.brand {{ text-align: center; margin-bottom: 2rem; }}
+.brand .logo {{ display: inline-flex; align-items: center; justify-content: center;
+               width: 56px; height: 56px; border-radius: 14px;
+               background: linear-gradient(135deg, #d97706, #b45309);
+               box-shadow: 0 8px 24px rgba(217, 119, 6, 0.25);
+               font-size: 1.8rem; margin-bottom: 0.75rem; }}
+.brand h1 {{ color: #fff; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; }}
+.brand .tag {{ color: #888; font-size: 0.9rem; margin-top: 0.35rem; }}
+.box {{ background: rgba(26, 26, 26, 0.8); backdrop-filter: blur(10px);
+        padding: 1.75rem; border-radius: 14px; border: 1px solid #2a2a2a;
+        width: 100%; max-width: 380px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); }}
+.box label {{ display: block; font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;
+              text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }}
+input {{ width: 100%; padding: 0.85rem 1rem; background: #0a0a0a; border: 1px solid #333;
+         border-radius: 9px; color: #fff; font-size: 1rem; margin-bottom: 1rem;
+         outline: none; transition: border-color 0.15s; }}
 input:focus {{ border-color: #d97706; }}
-button {{ width: 100%; padding: 0.75rem; background: #d97706; color: #000; border: none; border-radius: 8px;
-          font-size: 1rem; font-weight: 600; cursor: pointer; }}
-.error {{ color: #ef4444; font-size: 0.85rem; margin-bottom: 0.75rem; }}
-</style></head><body><div class="box">
-<h1>Reel Transcriber</h1><p>Enter the team password to continue.</p>
+button {{ width: 100%; padding: 0.85rem; background: #d97706; color: #000; border: none;
+          border-radius: 9px; font-size: 1rem; font-weight: 600; cursor: pointer;
+          transition: background 0.15s; }}
+button:hover {{ background: #ea8b13; }}
+.error {{ color: #ef4444; font-size: 0.85rem; margin-bottom: 0.75rem; padding: 0.6rem 0.8rem;
+          background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2);
+          border-radius: 8px; }}
+.footer {{ margin-top: 2rem; font-size: 0.8rem; color: #555; text-align: center; }}
+.footer a {{ color: #888; text-decoration: none; border-bottom: 1px dotted #555; }}
+.footer a:hover {{ color: #d97706; border-color: #d97706; }}
+</style></head><body>
+<div class="brand">
+  <div class="logo">🎙️</div>
+  <h1>Reel Transcriber</h1>
+  <div class="tag">Turn any reel into text</div>
+</div>
+<div class="box">
 {err_html}
 <form method="POST" action="/login">
-<input type="password" name="password" placeholder="Password" autofocus required>
+<label for="pw">Team password</label>
+<input id="pw" type="password" name="password" placeholder="••••••••••" autofocus required>
 <button type="submit">Sign in</button>
-</form></div></body></html>"""
+</form></div>
+<div class="footer">Built by <a href="https://orcalynx.com" target="_blank" rel="noopener">Orcalynx</a></div>
+</body></html>"""
 
 
 @app.get("/", response_class=HTMLResponse)
