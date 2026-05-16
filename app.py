@@ -1,6 +1,8 @@
 """Local web UI for the reel transcriber. Run with: ./serve"""
 import os
+import sqlite3
 import tempfile
+import time
 import uuid
 from pathlib import Path
 
@@ -12,11 +14,36 @@ from pydantic import BaseModel
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 FFMPEG_PATH = SCRIPT_DIR / "bin" / "ffmpeg"
+DB_PATH = SCRIPT_DIR / "history.db"
+
 if FFMPEG_PATH.exists():
     os.environ["PATH"] = f"{FFMPEG_PATH.parent}{os.pathsep}{os.environ.get('PATH', '')}"
 
 app = FastAPI(title="Reel Transcriber")
 _model_cache = {}
+
+
+def db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    with db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url TEXT NOT NULL,
+                transcript TEXT NOT NULL,
+                language TEXT,
+                model TEXT,
+                created_at INTEGER NOT NULL
+            )
+        """)
+
+
+init_db()
 
 
 def get_model(size: str):
@@ -31,6 +58,7 @@ class TranscribeRequest(BaseModel):
 
 
 class TranscribeResponse(BaseModel):
+    id: int
     transcript: str
     language: str
 
@@ -72,7 +100,43 @@ async def transcribe(req: TranscribeRequest):
             f.unlink(missing_ok=True)
         os.rmdir(tmp_dir)
 
-    return TranscribeResponse(transcript=result["text"].strip(), language=result.get("language", "unknown"))
+    transcript_text = result["text"].strip()
+    language = result.get("language", "unknown")
+
+    with db() as conn:
+        cur = conn.execute(
+            "INSERT INTO history (url, transcript, language, model, created_at) VALUES (?, ?, ?, ?, ?)",
+            (url, transcript_text, language, req.model, int(time.time())),
+        )
+        new_id = cur.lastrowid
+
+    return TranscribeResponse(id=new_id, transcript=transcript_text, language=language)
+
+
+@app.get("/api/history")
+async def list_history():
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT id, url, language, model, created_at, substr(transcript, 1, 120) as preview "
+            "FROM history ORDER BY created_at DESC"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+@app.get("/api/history/{item_id}")
+async def get_history_item(item_id: int):
+    with db() as conn:
+        row = conn.execute("SELECT * FROM history WHERE id = ?", (item_id,)).fetchone()
+    if not row:
+        raise HTTPException(404, "Not found")
+    return dict(row)
+
+
+@app.delete("/api/history/{item_id}")
+async def delete_history_item(item_id: int):
+    with db() as conn:
+        conn.execute("DELETE FROM history WHERE id = ?", (item_id,))
+    return {"ok": True}
 
 
 @app.get("/", response_class=HTMLResponse)

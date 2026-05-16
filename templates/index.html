@@ -12,10 +12,83 @@
             color: #e5e5e5;
             min-height: 100vh;
             display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: #111;
+            border-right: 1px solid #222;
+            height: 100vh;
+            overflow-y: auto;
+            flex-shrink: 0;
+            padding: 1.25rem 0;
+        }
+        .sidebar-header {
+            padding: 0 1.25rem 1rem;
+            border-bottom: 1px solid #222;
+            margin-bottom: 0.75rem;
+        }
+        .sidebar-header h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #888;
+            font-weight: 600;
+        }
+        .history-empty { padding: 1rem 1.25rem; color: #555; font-size: 0.85rem; }
+        .history-item {
+            padding: 0.75rem 1.25rem;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: background 0.15s;
+            position: relative;
+        }
+        .history-item:hover { background: #1a1a1a; }
+        .history-item.active { background: #1a1a1a; border-left-color: #d97706; }
+        .history-item .meta {
+            font-size: 0.7rem;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+        .history-item .preview {
+            font-size: 0.85rem;
+            color: #ccc;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .history-item .delete-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: none;
+            border: none;
+            color: #555;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            display: none;
+        }
+        .history-item:hover .delete-btn { display: block; }
+        .history-item .delete-btn:hover { background: #2a1010; color: #ef4444; }
+
+        /* Main */
+        .main {
+            flex: 1;
+            display: flex;
             align-items: center;
             justify-content: center;
+            padding: 2rem;
+            overflow-y: auto;
+            min-height: 100vh;
         }
-        .container { width: 100%; max-width: 680px; padding: 2rem; }
+        .container { width: 100%; max-width: 680px; }
+
         h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.25rem; color: #fff; }
         .subtitle { color: #888; margin-bottom: 1.5rem; font-size: 0.95rem; }
 
@@ -43,7 +116,7 @@
             cursor: pointer;
         }
 
-        button {
+        button.primary {
             padding: 0.75rem 1.5rem;
             background: #d97706;
             color: #000;
@@ -54,8 +127,8 @@
             cursor: pointer;
             white-space: nowrap;
         }
-        button:hover { opacity: 0.9; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button.primary:hover { opacity: 0.9; }
+        button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .hint { font-size: 0.8rem; color: #666; margin-bottom: 1.5rem; }
 
@@ -66,14 +139,28 @@
             border-radius: 8px;
             padding: 1.25rem;
         }
-        .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-        .result-header span {
-            font-size: 0.8rem; color: #888;
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .result-header .meta-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+        .result-header .meta-tags span {
+            font-size: 0.75rem; color: #888;
             background: #262626; padding: 0.2rem 0.6rem; border-radius: 4px;
         }
-        .copy-btn { padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #262626; color: #ccc; border-radius: 4px; }
+        .result-header .source-link {
+            font-size: 0.75rem; color: #d97706;
+            text-decoration: none;
+            background: #262626; padding: 0.2rem 0.6rem; border-radius: 4px;
+        }
+        .result-header .source-link:hover { background: #333; }
+        .copy-btn { padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #262626; color: #ccc; border-radius: 4px; border: none; cursor: pointer; }
         .copy-btn:hover { background: #333; }
-        .transcript-text { line-height: 1.7; font-size: 0.95rem; white-space: pre-wrap; max-height: 450px; overflow-y: auto; }
+        .transcript-text { line-height: 1.7; font-size: 0.95rem; white-space: pre-wrap; max-height: 60vh; overflow-y: auto; }
 
         .status { text-align: center; padding: 2rem 0; color: #888; display: none; }
         .spinner {
@@ -84,38 +171,55 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
         .error { color: #ef4444; text-align: center; padding: 1rem 0; display: none; }
+
+        @media (max-width: 720px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; max-height: 240px; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Reel Transcriber</h1>
-        <p class="subtitle">Paste an Instagram / TikTok / YouTube link. Runs offline on your Mac.</p>
-
-        <div class="controls">
-            <input type="url" id="url" placeholder="https://www.instagram.com/reel/..." autofocus>
-            <select id="model">
-                <option value="tiny">tiny (fast)</option>
-                <option value="base" selected>base</option>
-                <option value="small">small</option>
-                <option value="medium">medium (accurate)</option>
-            </select>
-            <button id="btn" onclick="transcribe()">Transcribe</button>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>History</h2>
         </div>
-        <p class="hint">First use of each model downloads it (~75MB - 1.5GB). After that, fully offline.</p>
+        <div id="historyList"></div>
+    </aside>
 
-        <div class="status" id="status">
-            <span class="spinner"></span> Working... downloading reel + transcribing.
-        </div>
-        <div class="error" id="error"></div>
+    <main class="main">
+        <div class="container">
+            <h1>Reel Transcriber</h1>
+            <p class="subtitle">Paste an Instagram / TikTok / YouTube link. Runs offline on your Mac.</p>
 
-        <div class="result" id="result">
-            <div class="result-header">
-                <span id="lang"></span>
-                <button class="copy-btn" onclick="copyText()">Copy</button>
+            <div class="controls">
+                <input type="url" id="url" placeholder="https://www.instagram.com/reel/..." autofocus>
+                <select id="model">
+                    <option value="tiny">tiny (fast)</option>
+                    <option value="base" selected>base</option>
+                    <option value="small">small</option>
+                    <option value="medium">medium (accurate)</option>
+                </select>
+                <button class="primary" id="btn" onclick="transcribe()">Transcribe</button>
             </div>
-            <div class="transcript-text" id="transcript"></div>
+            <p class="hint">First use of each model downloads it (~75MB - 1.5GB). After that, fully offline.</p>
+
+            <div class="status" id="status">
+                <span class="spinner"></span> Working... downloading reel + transcribing.
+            </div>
+            <div class="error" id="error"></div>
+
+            <div class="result" id="result">
+                <div class="result-header">
+                    <div class="meta-tags">
+                        <span id="lang"></span>
+                        <a id="sourceLink" class="source-link" target="_blank" rel="noopener">Source ↗</a>
+                    </div>
+                    <button class="copy-btn" onclick="copyText()">Copy</button>
+                </div>
+                <div class="transcript-text" id="transcript"></div>
+            </div>
         </div>
-    </div>
+    </main>
 
     <script>
         const urlInput = document.getElementById('url');
@@ -126,8 +230,71 @@
         const result = document.getElementById('result');
         const transcript = document.getElementById('transcript');
         const lang = document.getElementById('lang');
+        const sourceLink = document.getElementById('sourceLink');
+        const historyList = document.getElementById('historyList');
+
+        let activeId = null;
 
         urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') transcribe(); });
+
+        function fmtDate(ts) {
+            const d = new Date(ts * 1000);
+            const now = new Date();
+            const sameDay = d.toDateString() === now.toDateString();
+            if (sameDay) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
+
+        async function loadHistory() {
+            const res = await fetch('/api/history');
+            const items = await res.json();
+            if (items.length === 0) {
+                historyList.innerHTML = '<div class="history-empty">No transcripts yet.</div>';
+                return;
+            }
+            historyList.innerHTML = items.map(it => `
+                <div class="history-item ${it.id === activeId ? 'active' : ''}" data-id="${it.id}">
+                    <div class="meta">${fmtDate(it.created_at)} · ${it.model || ''}</div>
+                    <div class="preview">${escapeHtml(it.preview)}${it.preview.length >= 120 ? '…' : ''}</div>
+                    <button class="delete-btn" data-del="${it.id}" title="Delete">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(s) {
+            return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        historyList.addEventListener('click', async (e) => {
+            const delBtn = e.target.closest('[data-del]');
+            if (delBtn) {
+                e.stopPropagation();
+                const id = delBtn.dataset.del;
+                await fetch(`/api/history/${id}`, { method: 'DELETE' });
+                if (parseInt(id) === activeId) {
+                    activeId = null;
+                    result.style.display = 'none';
+                }
+                loadHistory();
+                return;
+            }
+            const item = e.target.closest('.history-item');
+            if (!item) return;
+            const id = parseInt(item.dataset.id);
+            const res = await fetch(`/api/history/${id}`);
+            const data = await res.json();
+            showResult(data);
+            activeId = id;
+            loadHistory();
+        });
+
+        function showResult(data) {
+            transcript.textContent = data.transcript;
+            lang.textContent = `${data.language} · ${data.model || ''}`;
+            sourceLink.href = data.url;
+            result.style.display = 'block';
+            error.style.display = 'none';
+        }
 
         async function transcribe() {
             const url = urlInput.value.trim();
@@ -147,9 +314,10 @@
                     throw new Error(data.detail || 'Something went wrong');
                 }
                 const data = await res.json();
-                transcript.textContent = data.transcript;
-                lang.textContent = `Language: ${data.language} · Model: ${modelSelect.value}`;
-                result.style.display = 'block';
+                showResult({ ...data, url, model: modelSelect.value });
+                activeId = data.id;
+                urlInput.value = '';
+                loadHistory();
             } catch (e) {
                 error.textContent = e.message;
                 error.style.display = 'block';
@@ -161,9 +329,12 @@
 
         function copyText() {
             navigator.clipboard.writeText(transcript.textContent);
-            document.querySelector('.copy-btn').textContent = 'Copied!';
-            setTimeout(() => document.querySelector('.copy-btn').textContent = 'Copy', 2000);
+            const btn = document.querySelector('.copy-btn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
         }
+
+        loadHistory();
     </script>
 </body>
 </html>
