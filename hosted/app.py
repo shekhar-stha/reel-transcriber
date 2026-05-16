@@ -273,10 +273,17 @@ body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); }}
 .box label {{ display: block; font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;
               text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }}
-input {{ width: 100%; padding: 0.85rem 1rem; background: #0a0a0a; border: 1px solid #333;
-         border-radius: 9px; color: #fff; font-size: 1rem; margin-bottom: 1rem;
+.pw-wrap {{ position: relative; margin-bottom: 1rem; }}
+input {{ width: 100%; padding: 0.85rem 2.6rem 0.85rem 1rem; background: #0a0a0a; border: 1px solid #333;
+         border-radius: 9px; color: #fff; font-size: 1rem;
          outline: none; transition: border-color 0.15s; }}
 input:focus {{ border-color: #d97706; }}
+.toggle-pw {{ position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%);
+              background: none; border: none; color: #666; cursor: pointer;
+              padding: 0.4rem 0.55rem; border-radius: 6px; font-size: 1rem;
+              display: flex; align-items: center; justify-content: center;
+              width: auto; height: auto; transition: color 0.15s, background 0.15s; }}
+.toggle-pw:hover {{ color: #d97706; background: rgba(217, 119, 6, 0.08); }}
 button {{ width: 100%; padding: 0.85rem; background: #d97706; color: #000; border: none;
           border-radius: 9px; font-size: 1rem; font-weight: 600; cursor: pointer;
           transition: background 0.15s; }}
@@ -297,9 +304,32 @@ button:hover {{ background: #ea8b13; }}
 {err_html}
 <form method="POST" action="/login">
 <label for="pw">Team password</label>
-<input id="pw" type="password" name="password" placeholder="••••••••••" autofocus required>
+<div class="pw-wrap">
+  <input id="pw" type="password" name="password" placeholder="••••••••••" autofocus required>
+  <button type="button" class="toggle-pw" id="togglePw" aria-label="Show password" title="Show password">
+    <svg id="eyeOpen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    <svg id="eyeOff" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+  </button>
+</div>
 <button type="submit">Sign in</button>
 </form></div>
+<script>
+(function() {{
+  var btn = document.getElementById('togglePw');
+  var input = document.getElementById('pw');
+  var on = document.getElementById('eyeOpen');
+  var off = document.getElementById('eyeOff');
+  btn.addEventListener('click', function() {{
+    var isPw = input.type === 'password';
+    input.type = isPw ? 'text' : 'password';
+    on.style.display = isPw ? 'none' : '';
+    off.style.display = isPw ? '' : 'none';
+    btn.setAttribute('aria-label', isPw ? 'Hide password' : 'Show password');
+    btn.title = isPw ? 'Hide password' : 'Show password';
+    input.focus();
+  }});
+}})();
+</script>
 <div class="footer">Built by <a href="https://orcalynx.com" target="_blank" rel="noopener">Orcalynx</a></div>
 </body></html>"""
 
