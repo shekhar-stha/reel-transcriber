@@ -9,3 +9,5 @@ venv/
 bin/ffmpeg
 uv.lock
 history.db
+outputs/
+.DS_Store
