@@ -27,6 +27,35 @@ RATE_LIMIT_PER_HOUR = int(os.environ.get("RATE_LIMIT_PER_HOUR", "20"))
 ACCESS_PASSWORD = os.environ.get("ACCESS_PASSWORD", "")  # web login
 API_TOKEN = os.environ.get("API_TOKEN", "")              # programmatic API access
 
+# ---- Instagram auth cookies ----
+# Set IG_COOKIES on the server (Render env var) to the full Netscape-format
+# cookies.txt contents. Instagram requires a logged-in session to fetch reels.
+_COOKIE_FILE = None
+def cookie_file():
+    """Write IG_COOKIES env var to a temp file once; return its path (or None)."""
+    global _COOKIE_FILE
+    raw = os.environ.get("IG_COOKIES", "").strip()
+    if not raw:
+        return None
+    if _COOKIE_FILE and os.path.exists(_COOKIE_FILE):
+        return _COOKIE_FILE
+    # Netscape header is required by yt-dlp
+    if not raw.startswith("# Netscape") and not raw.startswith("# HTTP Cookie"):
+        raw = "# Netscape HTTP Cookie File\n" + raw
+    path = os.path.join(tempfile.gettempdir(), "ig_cookies.txt")
+    with open(path, "w") as f:
+        f.write(raw + "\n")
+    _COOKIE_FILE = path
+    return path
+
+
+def base_ydl_opts() -> dict:
+    opts = {"quiet": True, "no_warnings": True}
+    ck = cookie_file()
+    if ck:
+        opts["cookiefile"] = ck
+    return opts
+
 app = FastAPI(title="Reel Transcriber")
 _client = None
 _rate_buckets: dict[str, list[float]] = defaultdict(list)
@@ -98,7 +127,7 @@ def rate_limit(request: Request):
 
 def probe_video(url: str) -> dict:
     try:
-        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "skip_download": True}) as ydl:
+        with yt_dlp.YoutubeDL({**base_ydl_opts(), "skip_download": True}) as ydl:
             info = ydl.extract_info(url, download=False)
             return {
                 "duration": info.get("duration", 0) or 0,
@@ -141,11 +170,10 @@ async def transcribe(req: TranscribeRequest, request: Request, _auth=Depends(req
     output_template = os.path.join(tmp_dir, f"{uuid.uuid4().hex}.%(ext)s")
 
     ydl_opts = {
+        **base_ydl_opts(),
         "format": "bestaudio/best",
         "outtmpl": output_template,
         "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "128"}],
-        "quiet": True,
-        "no_warnings": True,
         "max_filesize": MAX_AUDIO_BYTES,
     }
 
@@ -221,7 +249,7 @@ async def delete_history_item(item_id: int, _auth=Depends(require_auth)):
 
 @app.get("/healthz")
 async def healthz():
-    return {"ok": True, "auth_enabled": bool(ACCESS_PASSWORD), "api_token_enabled": bool(API_TOKEN)}
+    return {"ok": True, "auth_enabled": bool(ACCESS_PASSWORD), "api_token_enabled": bool(API_TOKEN), "ig_cookies_enabled": bool(os.environ.get("IG_COOKIES", "").strip())}
 
 
 @app.post("/login")
